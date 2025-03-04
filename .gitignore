@@ -1,0 +1,7 @@
+# Ignore everything
+/*
+
+# Allow only the simulate.do file, README, and gitignore
+!simulate.do
+!README.md
+!.gitignore
