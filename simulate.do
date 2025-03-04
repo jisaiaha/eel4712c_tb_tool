@@ -30,26 +30,30 @@ gets stdin choice
 # Convert choice to a valid index
 if {[string is integer -strict $choice] && $choice > 0 && $choice <= [llength $testbenches]} {
     set selected_tb [lindex $testbenches [expr $choice - 1]]
-    set entity_name [file rootname [file tail $selected_tb]]
+    set entity_name [string range $selected_tb 0 [expr [string length $selected_tb] - 5]]  ;# Extract base name without extension
+    set design_entity_name [string range $selected_tb 0 [expr [string length $selected_tb] - 8]]  ;# Extract base name without extension and _tb
+    set design_file "$design_entity_name.vhd"  ;# Expected design file name
 
     puts "Compiling and running: $selected_tb"
 
-    # Step 5: Compile and simulate
-    vlog $selected_tb
-    vsim -novopt work.$entity_name
-
-    # Add waves (optional, remove if not needed)
-    add wave -position insertpoint sim:/*
-
-    # Step 6: Run simulation with timeout
-    set timeout_limit 1000  ;# Set the timeout limit in nanoseconds
-    run $timeout_limit
-
-    # Step 7: Force stop if simulation is still running
-    if {[vsim status] == "running"} {
-        puts "Simulation exceeded timeout limit ($timeout_limit ns). Stopping simulation."
-        quit -force
+    # Step 5: Compile the design file and the testbench (if design file exists)
+    if {[file exists $design_file]} {
+        puts "Compiling design file: $design_file"
+        vcom -reportprogress 300 -work work $design_file
+    } else {
+        puts "Warning: Design file '$design_file' not found!"
     }
+
+    puts "Compiling testbench file: $selected_tb"
+    vcom -reportprogress 300 -work work $selected_tb
+
+    # Step 6: Simulate the selected testbench
+    puts "Simulating the selected entity: $entity_name"
+    vsim work.$entity_name
+
+    # Step 7: Run simulation
+    puts "Adding waves"
+    add wave -position insertpoint sim:/*
 
 } else {
     puts "Invalid selection. Exiting."
